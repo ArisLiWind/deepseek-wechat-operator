@@ -4,12 +4,19 @@
   "description": "A publishable dsh plugin that turns accessible WeChat content into an agent-operated inbox, digest, and action layer.",
   "type": "module",
   "license": "MIT",
+  "homepage": "https://github.com/ArisLiWind/deepseek-wechat-operator",
+  "bugs": {
+    "url": "https://github.com/ArisLiWind/deepseek-wechat-operator/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/zhuanz1mima0000/deepseek-wechat-operator.git"
+    "url": "git+https://github.com/ArisLiWind/deepseek-wechat-operator.git"
+  },
+  "bin": {
+    "deepseek-wechat-operator-bridge": "./src/bridge-server.js"
   },
   "keywords": [
     "deepseek",
@@ -21,14 +28,18 @@
   ],
   "files": [
     "src/**/*.js",
+    "assets/**/*",
     "web/**/*",
     "examples/**/*",
     "docs/**/*",
     "README.md",
+    "README.zh.md",
     "LICENSE"
   ],
   "exports": {
     ".": "./src/index.js",
+    "./bridge": "./src/bridge-service.js",
+    "./normalize": "./src/normalize.js",
     "./domain": "./src/domain.js",
     "./fixtures": "./src/fixtures.js",
     "./policy": "./src/policy.js",
@@ -37,7 +48,14 @@
   "scripts": {
     "test": "node --test",
     "demo:json": "node ./src/demo.js",
-    "check": "node --test && node ./src/demo.js"
+    "bridge:dev": "node ./src/bridge-server.js",
+    "demo:e2e": "node ./src/e2e-demo.js",
+    "perf:demo": "node ./src/perf-demo.js",
+    "pack:check": "npm pack --dry-run",
+    "check": "node --test && node ./src/demo.js && node ./src/e2e-demo.js && node ./src/perf-demo.js && npm pack --dry-run"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "*",

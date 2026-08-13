@@ -1,0 +1,17 @@
+{
+  "msg": {
+    "client_id": "demo-ilink-001",
+    "from_user_id": "zoe-capital",
+    "from_user_name": "Zoe Capital",
+    "context_token": "CTX-ZOE-001",
+    "item_list": [
+      {
+        "type": 1,
+        "text_item": {
+          "text": "We liked the direction. Can you explain your AI agent moat and fundraising timeline?"
+        }
+      }
+    ]
+  }
+}
+

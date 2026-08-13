@@ -1,5 +1,7 @@
 # DeepSeek WeChat Operator
 
+English | [中文](./README.zh.md)
+
 `DeepSeek WeChat Operator` is a public, publishable `dsh-plugin` repository built on top of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
 
 It is not "AI fully controls my private WeChat." It is a policy-gated Agent layer that turns **accessible, user-authorized WeChat information** into a working surface for:
@@ -30,9 +32,13 @@ This product does **not** claim unsupported powers such as silently reading all 
 - A publishable `dsh` plugin entry at [`src/index.js`](./src/index.js)
 - Ranking, digest, reply, and opportunity extraction logic in [`src/domain.js`](./src/domain.js)
 - A clear action-policy gate in [`src/policy.js`](./src/policy.js)
+- A real event bridge with local persistence in [`src/bridge-server.js`](./src/bridge-server.js) and [`src/bridge-service.js`](./src/bridge-service.js)
+- Payload normalization for iLink-compatible inbound events in [`src/normalize.js`](./src/normalize.js)
 - A built-in mock data mode for product demos in [`src/fixtures.js`](./src/fixtures.js)
 - A polished command-center demo in [`web/index.html`](./web/index.html)
 - A sample `dsh` overlay in [`examples/cordis.patch.yml`](./examples/cordis.patch.yml)
+- A bridge-mode `dsh` overlay in [`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml)
+- Launch assets in [`assets/`](./assets)
 
 ## First-version hero feature
 
@@ -96,7 +102,8 @@ This repo registers a first practical surface:
 The current implementation is intentionally honest:
 
 - a built-in `mock` mode works today for demos and product iteration
-- a `bridge` mode is prepared for a real WeChat connector to supply accessible objects later
+- a `bridge` mode now accepts real inbound events through a local HTTP bridge
+- reply validation respects the iLink constraint that outbound replies require a cached inbound `context_token`
 
 ## Install
 
@@ -108,19 +115,37 @@ pnpm add dsh-plugin-deepseek-wechat-operator
 
 Then add the overlay from [`examples/cordis.patch.yml`](./examples/cordis.patch.yml) to your `dsh` profile.
 
+For bridge-backed usage:
+
+```sh
+WECHAT_OPERATOR_API_KEY=demo-key npm run bridge:dev
+```
+
+Then ingest an iLink-style event:
+
+```sh
+curl -X POST http://127.0.0.1:3468/ingest/ilink \
+  -H 'Authorization: Bearer demo-key' \
+  -H 'Content-Type: application/json' \
+  --data @examples/bridge-event.ilink.json
+```
+
+And point `dsh` at the bridge via [`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml).
+
 ## Local validation
 
 ```sh
 node --test
 node ./src/demo.js
+npm run demo:e2e
+npm pack --dry-run
 ```
 
 ## Repo publishing checklist
 
-- Create a public GitHub repository
 - Add the `dsh-plugin` topic
 - Publish the npm package publicly
-- Include screenshots from `web/index.html`
+- Include launch assets from [`assets/`](./assets)
 - Document the supported data boundary clearly
 - Do not market unsupported personal-WeChat powers
 
@@ -128,5 +153,7 @@ node ./src/demo.js
 
 - Product brief: [`docs/product.md`](./docs/product.md)
 - Architecture: [`docs/architecture.md`](./docs/architecture.md)
+- Gateway integration: [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)
+- Performance notes: [`docs/performance.md`](./docs/performance.md)
 - Roadmap: [`docs/roadmap.md`](./docs/roadmap.md)
-
+- X post draft: [`docs/x-post.md`](./docs/x-post.md)

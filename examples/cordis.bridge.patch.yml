@@ -1,0 +1,10 @@
+- insert:
+    - id: deepseek-wechat-operator
+      name: dsh-plugin-deepseek-wechat-operator
+      config:
+        mode: bridge
+        bridgeUrl: http://127.0.0.1:3468
+        bridgeApiKey: demo-key
+        digestLimit: 10
+        minimumScore: 0.45
+

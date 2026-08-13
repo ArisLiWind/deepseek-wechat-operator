@@ -1,6 +1,7 @@
 import z from "@deepseek-ai/schemastery"
 import { defineTool } from "@deepseek-ai/dsh-tools"
 import { buildDailyDigest, extractOpportunities, planAutomationRule, prepareReply, rankReplyCandidates, searchItems } from "./domain.js"
+import { WechatOperatorBridge } from "./bridge-service.js"
 import { getDemoFixtures } from "./fixtures.js"
 import { buildApprovalEnvelope } from "./policy.js"
 
@@ -10,13 +11,33 @@ export const inject = ["tools"]
 export const Config = z.object({
   mode: z.union([z.const("mock"), z.const("bridge")]).default("mock"),
   digestLimit: z.number().default(10),
-  minimumScore: z.number().default(0.45)
+  minimumScore: z.number().default(0.45),
+  bridgeUrl: z.string().default(""),
+  bridgeApiKey: z.string().default(""),
+  bridgeStoragePath: z.string().default("")
 })
 
-function resolveItems(config, ctx) {
+let cachedBridge = null
+let cachedBridgeKey = ""
+
+async function resolveItems(config, ctx) {
   if (config.mode === "bridge" && ctx.wechatOperatorBridge?.listAccessibleItems) {
     return ctx.wechatOperatorBridge.listAccessibleItems()
   }
+
+  if (config.mode === "bridge") {
+    const nextKey = JSON.stringify([config.bridgeUrl, config.bridgeApiKey, config.bridgeStoragePath])
+    if (!cachedBridge || cachedBridgeKey !== nextKey) {
+      cachedBridge = new WechatOperatorBridge({
+      baseUrl: config.bridgeUrl || undefined,
+      apiKey: config.bridgeApiKey || undefined,
+      storagePath: config.bridgeStoragePath || undefined
+      })
+      cachedBridgeKey = nextKey
+    }
+    return cachedBridge.listAccessibleItems()
+  }
+
   return getDemoFixtures()
 }
 
@@ -28,8 +49,8 @@ export function apply(ctx, config) {
       query: { type: "string", description: "Optional focus such as AI Agent startup or fundraising.", required: false },
       limit: { type: "integer", description: "Maximum number of returned items.", required: false }
     },
-    execute(args) {
-      const items = resolveItems(config, ctx)
+    async execute(args) {
+      const items = await resolveItems(config, ctx)
       const digest = buildDailyDigest(items, {
         limit: args.limit ?? config.digestLimit,
         minimumScore: config.minimumScore,
@@ -66,8 +87,8 @@ export function apply(ctx, config) {
       query: { type: "string", description: "Search phrase such as Shenzhen agent job or PDF from Lao Wang.", required: true },
       type: { type: "string", description: "Optional filter: article, file, message, opportunity.", required: false }
     },
-    execute(args) {
-      const results = searchItems(resolveItems(config, ctx), args.query, { type: args.type })
+    async execute(args) {
+      const results = searchItems(await resolveItems(config, ctx), args.query, { type: args.type })
         .slice(0, 10)
         .map(item => ({
           id: item.id,
@@ -87,8 +108,8 @@ export function apply(ctx, config) {
     parameters: {
       limit: { type: "integer", description: "Maximum number of people to rank.", required: false }
     },
-    execute(args) {
-      const results = rankReplyCandidates(resolveItems(config, ctx), { limit: args.limit ?? 5 })
+    async execute(args) {
+      const results = rankReplyCandidates(await resolveItems(config, ctx), { limit: args.limit ?? 5 })
       return Promise.resolve({ count: results.length, results })
     },
     presentCall: args => ({ card: "generic", title: "Rank replies", kind: "other", rawInput: args })
@@ -107,8 +128,8 @@ export function apply(ctx, config) {
         description: "Specific things the draft should ask or avoid."
       }
     },
-    execute(args) {
-      const reply = prepareReply(resolveItems(config, ctx), args.targetId, args.goal, args.constraints ?? [])
+    async execute(args) {
+      const reply = prepareReply(await resolveItems(config, ctx), args.targetId, args.goal, args.constraints ?? [])
       const approval = buildApprovalEnvelope({
         type: "send_message",
         targetId: args.targetId,
@@ -138,9 +159,9 @@ export function apply(ctx, config) {
       },
       action: { type: "string", description: "Action such as save_and_digest.", required: false }
     },
-    execute(args) {
+    async execute(args) {
       const rule = planAutomationRule(args)
-      const opportunities = extractOpportunities(resolveItems(config, ctx))
+      const opportunities = extractOpportunities(await resolveItems(config, ctx))
       return Promise.resolve({
         rule,
         exampleOpportunityCount: opportunities.length
@@ -149,4 +170,3 @@ export function apply(ctx, config) {
     presentCall: args => ({ card: "generic", title: "Plan automation", kind: "other", rawInput: args })
   }))
 }
-

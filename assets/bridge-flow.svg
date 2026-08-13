@@ -1,0 +1,18 @@
+<svg width="1400" height="720" viewBox="0 0 1400 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1400" height="720" fill="#F7F0E3"/>
+  <rect x="70" y="180" width="220" height="120" rx="24" fill="#FFF9F0" stroke="#D8CAB8"/>
+  <rect x="380" y="180" width="250" height="120" rx="24" fill="#FFF9F0" stroke="#D8CAB8"/>
+  <rect x="720" y="180" width="250" height="120" rx="24" fill="#FFF9F0" stroke="#D8CAB8"/>
+  <rect x="1060" y="180" width="250" height="120" rx="24" fill="#FFF9F0" stroke="#D8CAB8"/>
+  <text x="114" y="246" fill="#1D1A16" font-family="Georgia, serif" font-size="30">iLink / ClawBot</text>
+  <text x="446" y="246" fill="#1D1A16" font-family="Georgia, serif" font-size="30">iLink Gateway</text>
+  <text x="744" y="246" fill="#1D1A16" font-family="Georgia, serif" font-size="30">Event Bridge</text>
+  <text x="1092" y="246" fill="#1D1A16" font-family="Georgia, serif" font-size="30">dsh Plugin</text>
+  <path d="M290 240H380" stroke="#C55A11" stroke-width="8" stroke-linecap="round"/>
+  <path d="M630 240H720" stroke="#C55A11" stroke-width="8" stroke-linecap="round"/>
+  <path d="M970 240H1060" stroke="#C55A11" stroke-width="8" stroke-linecap="round"/>
+  <text x="166" y="420" fill="#5E5448" font-family="Georgia, serif" font-size="26">long poll / webhook</text>
+  <text x="434" y="420" fill="#5E5448" font-family="Georgia, serif" font-size="26">cursor + context_token cache</text>
+  <text x="756" y="420" fill="#5E5448" font-family="Georgia, serif" font-size="26">normalize + persist + approve</text>
+  <text x="1062" y="420" fill="#5E5448" font-family="Georgia, serif" font-size="26">digest + find + rank + act</text>
+</svg>
