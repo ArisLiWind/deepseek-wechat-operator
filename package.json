@@ -1,0 +1,47 @@
+{
+  "name": "dsh-plugin-deepseek-wechat-operator",
+  "version": "0.1.0",
+  "description": "A publishable dsh plugin that turns accessible WeChat content into an agent-operated inbox, digest, and action layer.",
+  "type": "module",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhuanz1mima0000/deepseek-wechat-operator.git"
+  },
+  "keywords": [
+    "deepseek",
+    "dsh",
+    "dsh-plugin",
+    "wechat",
+    "agent",
+    "operator"
+  ],
+  "files": [
+    "src/**/*.js",
+    "web/**/*",
+    "examples/**/*",
+    "docs/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": "./src/index.js",
+    "./domain": "./src/domain.js",
+    "./fixtures": "./src/fixtures.js",
+    "./policy": "./src/policy.js",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test",
+    "demo:json": "node ./src/demo.js",
+    "check": "node --test && node ./src/demo.js"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "*",
+    "@deepseek-ai/dsh-tools": "*",
+    "@deepseek-ai/schemastery": "*"
+  }
+}

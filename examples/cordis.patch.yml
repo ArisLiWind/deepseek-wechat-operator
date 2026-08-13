@@ -1,0 +1,8 @@
+- insert:
+    - id: deepseek-wechat-operator
+      name: dsh-plugin-deepseek-wechat-operator
+      config:
+        mode: mock
+        digestLimit: 10
+        minimumScore: 0.45
+

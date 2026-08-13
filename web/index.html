@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>DeepSeek WeChat Operator</title>
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero">
+        <p class="eyebrow">DeepSeek WeChat Operator</p>
+        <h1>What should DeepSeek do with your WeChat?</h1>
+        <p class="lede">
+          Turn a noisy message stream into a ranked daily operating system for attention, replies, knowledge, and execution.
+        </p>
+        <div class="prompt-bar">
+          <span class="prompt-label">Prompt</span>
+          <span class="prompt-text">From everything I can reach today, keep only the 10 things that matter for AI Agent创业.</span>
+        </div>
+      </header>
+
+      <main class="grid">
+        <section class="panel panel-large">
+          <div class="panel-head">
+            <h2>Today</h2>
+            <span>Top ranked items</span>
+          </div>
+          <div id="today-list" class="stack"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Inbox Intelligence</h2>
+            <span>Reply or ignore</span>
+          </div>
+          <div id="reply-list" class="stack compact"></div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Knowledge</h2>
+            <span>Accumulated signals</span>
+          </div>
+          <ul class="knowledge-list">
+            <li>Strong interest in AI Agent, agent payments, and AI social.</li>
+            <li>Warm network cluster in Shenzhen startup and investor circles.</li>
+            <li>Low tolerance for repetitive marketing-account content.</li>
+          </ul>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>Actions</h2>
+            <span>Done, queued, blocked</span>
+          </div>
+          <div class="action-group">
+            <span class="chip green">Done</span>
+            <p>Saved 3 high-signal articles and 2 opportunities.</p>
+          </div>
+          <div class="action-group">
+            <span class="chip yellow">Approval</span>
+            <p>Reply draft prepared for Zoe Capital. Needs confirmation before sending.</p>
+          </div>
+          <div class="action-group">
+            <span class="chip red">Blocked</span>
+            <p>No red actions executed automatically.</p>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
+
