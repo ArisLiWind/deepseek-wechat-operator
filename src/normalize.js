@@ -94,14 +94,42 @@ function normalizeFileItem(message, item, index) {
   }
 }
 
+function normalizeMediaItem(message, item, index) {
+  const kind = item.type === "image" ? "image" : item.type === "voice" ? "voice" : item.type === "video" ? "video" : "file"
+  const fileName = item.file_name ?? item.file_item?.file_name ?? `${kind}-${index}`
+  const caption = item.caption ?? item.voice_item?.text ?? item.text ?? ""
+  const inferred = scoreFromText(`${kind} ${fileName} ${caption}`)
+  return {
+    id: `${message.messageId}-${kind}-${index}`,
+    type: "file",
+    mediaType: kind,
+    sender: message.sender,
+    contactId: message.senderId,
+    title: fileName,
+    fileName,
+    publishedAt: message.publishedAt,
+    body: caption || `${kind} attachment`,
+    accessibleVia: "ilink_webhook",
+    contextToken: message.contextToken,
+    source: message.channel,
+    why: "Attachment surfaced through the event bridge.",
+    ...inferred
+  }
+}
+
 function normalizeItems(message) {
   const items = Array.isArray(message.items) ? message.items : []
   return items.flatMap((item, index) => {
     if (item.type === "text" || item.type === 1 || item.text_item || item.text) {
       return [normalizeTextItem(message, item, index)]
     }
-    if (item.type === "file" || item.file_name || item.file_item) {
+    if (item.type === "file" || item.type === 4 || item.file_name || item.file_item) {
       return [normalizeFileItem(message, item, index)]
+    }
+    if (item.type === "image" || item.type === 2 || item.image_item
+      || item.type === "voice" || item.type === 3 || item.voice_item
+      || item.type === "video" || item.type === 5 || item.video_item) {
+      return [normalizeMediaItem(message, item, index)]
     }
     return []
   })
@@ -147,6 +175,30 @@ function toMessageEnvelope(payload) {
       contextToken: payload.context_token ?? null,
       channel: payload.channel ?? "gateway",
       items: payload.items
+    }
+  }
+
+  // Raw WeixinMessage as emitted by weixin-ilink-gateway (and the iLink Bot
+  // protocol itself): `item_list` at the top level with numeric item types
+  // (1=text, 2=image, 3=voice, 4=file, 5=video).
+  if (Array.isArray(payload?.item_list)) {
+    return {
+      messageId: payload.message_id ?? payload.messageId ?? `ilink-${Date.now()}`,
+      sender: payload.from_user_name ?? payload.from_nickname ?? payload.from_user_id ?? "Unknown",
+      senderId: payload.from_user_id ?? slugify(payload.from_user_name ?? payload.from_nickname),
+      publishedAt: payload.create_time_ms
+        ? new Date(Number(payload.create_time_ms)).toISOString()
+        : new Date().toISOString(),
+      contextToken: payload.context_token ?? null,
+      channel: "ilink",
+      items: payload.item_list.map(item => {
+        if (item.type === 1) return { type: "text", text: item.text_item?.text ?? "" }
+        if (item.type === 2) return { type: "image", image_item: item.image_item ?? null }
+        if (item.type === 3) return { type: "voice", voice_item: item.voice_item ?? null }
+        if (item.type === 4) return { type: "file", file_name: item.file_item?.file_name ?? item.file_name ?? "attachment", file_item: item.file_item ?? null }
+        if (item.type === 5) return { type: "video", video_item: item.video_item ?? null }
+        return item
+      })
     }
   }
 

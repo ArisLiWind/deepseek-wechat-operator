@@ -4,11 +4,18 @@ import http from "node:http"
 import path from "node:path"
 import { normalizeInboundPayload } from "./normalize.js"
 import { BridgeStore } from "./store.js"
+import { createOutbound } from "./outbound.js"
 
 const PORT = Number(process.env.PORT ?? 3468)
 const HOST = process.env.HOST ?? "127.0.0.1"
 const API_KEY = process.env.WECHAT_OPERATOR_API_KEY ?? ""
 const STORAGE_PATH = path.resolve(process.cwd(), process.env.WECHAT_OPERATOR_STORAGE_PATH ?? ".deepseek-wechat-operator/bridge-state.json")
+
+// Outbound wiring. `record-only` (default) never transmits; set
+// `WECHAT_OPERATOR_OUTBOUND=ilink-gateway` plus `ILINK_GATEWAY_SEND_URL`
+// (and optionally `ILINK_GATEWAY_API_KEY`) to dispatch replies to a real
+// gateway that speaks iLink/ClawBot to WeChat.
+const OUTBOUND_MODE = process.env.WECHAT_OPERATOR_OUTBOUND ?? "record-only"
 
 function readJsonBody(req) {
   return new Promise((resolve, reject) => {
@@ -40,6 +47,12 @@ function isAuthorized(req) {
 
 const store = new BridgeStore(STORAGE_PATH)
 await store.load()
+
+const outbound = createOutbound(OUTBOUND_MODE, {
+  store,
+  url: process.env.ILINK_GATEWAY_SEND_URL ?? "",
+  apiKey: process.env.ILINK_GATEWAY_API_KEY ?? ""
+})
 
 const server = http.createServer(async (req, res) => {
   try {
@@ -87,16 +100,7 @@ const server = http.createServer(async (req, res) => {
         return sendJson(res, 409, { ok: false, error: `No cached context_token for ${toUserId}` })
       }
 
-      const action = {
-        id: `outbound-${Date.now()}`,
-        type: "send_message",
-        toUserId,
-        text,
-        contextToken,
-        mode: "record-only",
-        createdAt: new Date().toISOString()
-      }
-      await store.recordOutboundAction(action)
+      const action = await outbound.sendText({ toUserId, text, contextToken })
       return sendJson(res, 200, { ok: true, action })
     }
 

@@ -31,12 +31,13 @@
 
 ## 产品核心
 
-第一版只保留五个核心动作：
+第一版只保留六个核心动作：
 
 - `Ask`：问我的微信世界任何问题
 - `Find`：找消息、文件、人、机会、文章
 - `Digest`：把高噪声信息压成真正值得看的少数项
 - `Act`：准备回复、整理结果、生成下一步动作
+- `Send`：在确认后把回复真正发出去（Yellow 门控）
 - `Automate`：沉淀长期过滤规则和日/周摘要
 
 Hero Feature 不是“AI 控制微信”，而是：
@@ -55,20 +56,27 @@ Hero Feature 不是“AI 控制微信”，而是：
 
 ## 已实现的能力
 
-当前已经有 5 个核心动作：
+当前已经有 6 个核心动作：
 
 - `wechat_digest_world`
 - `wechat_find`
 - `wechat_rank_replies`
 - `wechat_prepare_reply`
 - `wechat_plan_automation`
+- `wechat_send_message`（Yellow 门控：需 `confirm:true` 才会派发）
 
 其中 `bridge` 模式已经可以直接接真实事件：
 
-- 可以接收真实 webhook/轮询转发事件
+- 可以接收真实 webhook/轮询转发事件（含 iLink 原始 `WeixinMessage` 形态）
 - 会缓存每个用户最近的 `context_token`
-- 能把事件转成统一的 `accessible items`
+- 能把事件转成统一的 `accessible items`（text / image / voice / file / video）
 - 能验证“收到消息后再回复”这条 iLink 约束
+- 出站默认 `record-only`（只落盘不发送）；设置
+  `WECHAT_OPERATOR_OUTBOUND=ilink-gateway` 后才会把回复真正 POST 到网关上
+
+真实收发微信消息需要另一个 iLink/ClawBot 网关，见
+[`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)；接入 dsh 见
+[`docs/install-into-dsh.md`](./docs/install-into-dsh.md)。
 
 ## 如何本地跑起来
 

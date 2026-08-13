@@ -1,0 +1,26 @@
+# Patch layer to load this plugin into a dsh agent preset.
+#
+# Where this goes (hot-reloaded on long-lived surfaces):
+#   $DSH_HOME/profiles/<profile>/cordis.patch.yml     (DSH_HOME defaults to ~/.dsh)
+#
+# The patch format is the loader's entry-list patch (the same `- insert:` shape
+# this repo ships in examples/cordis.bridge.patch.yml). Before the loader can
+# import `dsh-plugin-deepseek-wechat-operator`, the package must be resolvable
+# from the profile's node_modules — see docs/install-into-dsh.md for the exact
+# `dsh plugin --profile <profile> add file:...` step.
+#
+# Two modes:
+#   mode: mock   -> read-only digest/rank/draft over the built-in demo fixtures,
+#                   nothing else running. Good for a smoke test of the tools.
+#   mode: bridge -> talks to the bridge server below, which ingests real
+#                   WeixinMessage webhook events and dispatches replies.
+
+- insert:
+    - id: deepseek-wechat-operator
+      name: dsh-plugin-deepseek-wechat-operator
+      config:
+        mode: bridge
+        bridgeUrl: http://127.0.0.1:3468
+        bridgeApiKey: demo-key
+        digestLimit: 10
+        minimumScore: 0.45

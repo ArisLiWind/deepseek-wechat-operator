@@ -1,6 +1,7 @@
 import path from "node:path"
 import { normalizeInboundPayload } from "./normalize.js"
 import { BridgeStore } from "./store.js"
+import { createOutbound } from "./outbound.js"
 
 const DEFAULT_STORAGE_PATH = path.resolve(process.cwd(), ".deepseek-wechat-operator", "bridge-state.json")
 
@@ -16,6 +17,10 @@ export class WechatOperatorBridge {
   constructor(options = {}) {
     this.options = options
     this.store = new BridgeStore(options.storagePath ?? DEFAULT_STORAGE_PATH)
+    this.outbound = options.outbound ?? createOutbound(options.outboundMode, {
+      ...options.outboundOptions,
+      store: this.store
+    })
     this.ready = false
   }
 
@@ -67,17 +72,7 @@ export class WechatOperatorBridge {
     if (!contextToken) {
       throw new Error(`No cached context_token for ${toUserId}`)
     }
-    const envelope = {
-      id: `outbound-${Date.now()}`,
-      type: "send_message",
-      toUserId,
-      text,
-      contextToken,
-      mode: "record-only",
-      createdAt: new Date().toISOString()
-    }
-    await this.store.recordOutboundAction(envelope)
-    return envelope
+    return this.outbound.sendText({ toUserId, text, contextToken })
   }
 }
 

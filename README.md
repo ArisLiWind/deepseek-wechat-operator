@@ -98,12 +98,19 @@ This repo registers a first practical surface:
 - `wechat_rank_replies`
 - `wechat_prepare_reply`
 - `wechat_plan_automation`
+- `wechat_send_message`
 
 The current implementation is intentionally honest:
 
 - a built-in `mock` mode works today for demos and product iteration
-- a `bridge` mode now accepts real inbound events through a local HTTP bridge
-- reply validation respects the iLink constraint that outbound replies require a cached inbound `context_token`
+- a `bridge` mode accepts real inbound events through a local HTTP bridge,
+  including the raw iLink `WeixinMessage` shape (`item_list`, text/image/voice/
+  file/video)
+- outbound is `record-only` by default (the reply is persisted, never sent);
+  set `WECHAT_OPERATOR_OUTBOUND=ilink-gateway` to actually dispatch replies to a
+  real iLink/ClawBot gateway
+- reply validation respects the iLink constraint that outbound replies require a
+  cached inbound `context_token`
 
 ## Install
 

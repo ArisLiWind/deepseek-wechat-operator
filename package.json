@@ -32,6 +32,7 @@
     "web/**/*",
     "examples/**/*",
     "docs/**/*",
+    "integration/**/*",
     "README.md",
     "README.zh.md",
     "LICENSE"
@@ -40,6 +41,7 @@
     ".": "./src/index.js",
     "./bridge": "./src/bridge-service.js",
     "./normalize": "./src/normalize.js",
+    "./outbound": "./src/outbound.js",
     "./domain": "./src/domain.js",
     "./fixtures": "./src/fixtures.js",
     "./policy": "./src/policy.js",

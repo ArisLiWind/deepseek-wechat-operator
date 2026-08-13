@@ -17,28 +17,67 @@ export const Config = z.object({
   bridgeStoragePath: z.string().default("")
 })
 
+// dsh-tools requires every tool to declare an `output.render`, which turns the
+// validated canonical value into model-facing content blocks. A pretty-printed
+// JSON text block is the honest default here: the model reads the whole object.
+function renderAsJson(_args, value) {
+  return [{ type: "text", text: JSON.stringify(value, null, 2) }]
+}
+
 let cachedBridge = null
 let cachedBridgeKey = ""
 
-async function resolveItems(config, ctx) {
+function mockSender() {
+  return {
+    async sendText({ toUserId, text }) {
+      return {
+        id: `outbound-${Date.now()}`,
+        type: "send_message",
+        toUserId,
+        text,
+        mode: "record-only",
+        delivered: false,
+        note: "mock mode: no bridge wired, reply not sent",
+        createdAt: new Date().toISOString()
+      }
+    }
+  }
+}
+
+async function resolveBridge(config, ctx) {
   if (config.mode === "bridge" && ctx.wechatOperatorBridge?.listAccessibleItems) {
-    return ctx.wechatOperatorBridge.listAccessibleItems()
+    return {
+      listItems: () => ctx.wechatOperatorBridge.listAccessibleItems(),
+      sendText: options => ctx.wechatOperatorBridge.sendText(options)
+    }
   }
 
   if (config.mode === "bridge") {
     const nextKey = JSON.stringify([config.bridgeUrl, config.bridgeApiKey, config.bridgeStoragePath])
     if (!cachedBridge || cachedBridgeKey !== nextKey) {
       cachedBridge = new WechatOperatorBridge({
-      baseUrl: config.bridgeUrl || undefined,
-      apiKey: config.bridgeApiKey || undefined,
-      storagePath: config.bridgeStoragePath || undefined
+        baseUrl: config.bridgeUrl || undefined,
+        apiKey: config.bridgeApiKey || undefined,
+        storagePath: config.bridgeStoragePath || undefined
       })
       cachedBridgeKey = nextKey
     }
-    return cachedBridge.listAccessibleItems()
+    return {
+      listItems: () => cachedBridge.listAccessibleItems(),
+      sendText: options => cachedBridge.sendText(options)
+    }
   }
 
-  return getDemoFixtures()
+  const mock = mockSender()
+  return {
+    listItems: async () => getDemoFixtures(),
+    sendText: options => mock.sendText(options)
+  }
+}
+
+async function resolveItems(config, ctx) {
+  const bridge = await resolveBridge(config, ctx)
+  return bridge.listItems()
 }
 
 export function apply(ctx, config) {
@@ -46,8 +85,8 @@ export function apply(ctx, config) {
     name: "wechat_digest_world",
     description: "Compress accessible WeChat content into the most important items for the user today.",
     parameters: {
-      query: { type: "string", description: "Optional focus such as AI Agent startup or fundraising.", required: false },
-      limit: { type: "integer", description: "Maximum number of returned items.", required: false }
+      query: { type: "string", description: "Optional focus such as AI Agent startup or fundraising." },
+      limit: { type: "integer", description: "Maximum number of returned items." }
     },
     async execute(args) {
       const items = await resolveItems(config, ctx)
@@ -56,11 +95,11 @@ export function apply(ctx, config) {
         minimumScore: config.minimumScore,
         interests: args.query ? [args.query] : undefined
       })
-      return Promise.resolve({
+      return {
         items: digest,
         count: digest.length,
         outlook: "This is a ranked compression of accessible content, not a claim of full WeChat visibility."
-      })
+      }
     },
     presentCall: args => ({ card: "generic", title: "Digest WeChat world", kind: "other", rawInput: args }),
     output: {
@@ -70,13 +109,10 @@ export function apply(ctx, config) {
         properties: {
           count: { type: "integer", required: true },
           outlook: { type: "string", required: true },
-          items: {
-            type: "array",
-            required: true,
-            items: { type: "object" }
-          }
+          items: { type: "array", required: true }
         }
-      }
+      },
+      render: renderAsJson
     }
   }))
 
@@ -85,7 +121,7 @@ export function apply(ctx, config) {
     description: "Find articles, files, people, messages, and opportunities in the accessible WeChat surface.",
     parameters: {
       query: { type: "string", description: "Search phrase such as Shenzhen agent job or PDF from Lao Wang.", required: true },
-      type: { type: "string", description: "Optional filter: article, file, message, opportunity.", required: false }
+      type: { type: "string", description: "Optional filter: article, file, message, opportunity." }
     },
     async execute(args) {
       const results = searchItems(await resolveItems(config, ctx), args.query, { type: args.type })
@@ -97,22 +133,45 @@ export function apply(ctx, config) {
           source: item.source ?? item.sender ?? "Unknown",
           hint: item.fileName ?? item.url ?? item.contactId ?? item.id
         }))
-      return Promise.resolve({ query: args.query, count: results.length, results })
+      return { query: args.query, count: results.length, results }
     },
-    presentCall: args => ({ card: "generic", title: "Find in WeChat", kind: "other", rawInput: args })
+    presentCall: args => ({ card: "generic", title: "Find in WeChat", kind: "other", rawInput: args }),
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          query: { type: "string", required: true },
+          count: { type: "integer", required: true },
+          results: { type: "array", required: true }
+        }
+      },
+      render: renderAsJson
+    }
   }))
 
   ctx.tools.register(defineTool({
     name: "wechat_rank_replies",
     description: "Rank which people are most worth replying to next.",
     parameters: {
-      limit: { type: "integer", description: "Maximum number of people to rank.", required: false }
+      limit: { type: "integer", description: "Maximum number of people to rank." }
     },
     async execute(args) {
       const results = rankReplyCandidates(await resolveItems(config, ctx), { limit: args.limit ?? 5 })
-      return Promise.resolve({ count: results.length, results })
+      return { count: results.length, results }
     },
-    presentCall: args => ({ card: "generic", title: "Rank replies", kind: "other", rawInput: args })
+    presentCall: args => ({ card: "generic", title: "Rank replies", kind: "other", rawInput: args }),
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          count: { type: "integer", required: true },
+          results: { type: "array", required: true }
+        }
+      },
+      render: renderAsJson
+    }
   }))
 
   ctx.tools.register(defineTool({
@@ -120,10 +179,9 @@ export function apply(ctx, config) {
     description: "Draft a reply for a chosen message and classify whether sending it requires approval.",
     parameters: {
       targetId: { type: "string", description: "The item id to reply to.", required: true },
-      goal: { type: "string", description: "What the reply should accomplish.", required: false },
+      goal: { type: "string", description: "What the reply should accomplish." },
       constraints: {
         type: "array",
-        required: false,
         items: { type: "string" },
         description: "Specific things the draft should ask or avoid."
       }
@@ -135,9 +193,20 @@ export function apply(ctx, config) {
         targetId: args.targetId,
         draft: reply.draft
       })
-      return Promise.resolve({ reply, approval })
+      return { reply, approval }
     },
-    presentCall: args => ({ card: "generic", title: "Prepare reply", kind: "other", rawInput: args })
+    presentCall: args => ({ card: "generic", title: "Prepare reply", kind: "other", rawInput: args }),
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          reply: { type: "object", additionalProperties: true, required: true },
+          approval: { type: "object", additionalProperties: true, required: true }
+        }
+      },
+      render: renderAsJson
+    }
   }))
 
   ctx.tools.register(defineTool({
@@ -147,26 +216,91 @@ export function apply(ctx, config) {
       name: { type: "string", description: "Rule name.", required: true },
       includeKeywords: {
         type: "array",
-        required: false,
         items: { type: "string" },
         description: "Keywords to keep."
       },
       excludeKeywords: {
         type: "array",
-        required: false,
         items: { type: "string" },
         description: "Keywords or sources to filter out."
       },
-      action: { type: "string", description: "Action such as save_and_digest.", required: false }
+      action: { type: "string", description: "Action such as save_and_digest." }
     },
     async execute(args) {
       const rule = planAutomationRule(args)
       const opportunities = extractOpportunities(await resolveItems(config, ctx))
-      return Promise.resolve({
+      return {
         rule,
         exampleOpportunityCount: opportunities.length
-      })
+      }
     },
-    presentCall: args => ({ card: "generic", title: "Plan automation", kind: "other", rawInput: args })
+    presentCall: args => ({ card: "generic", title: "Plan automation", kind: "other", rawInput: args }),
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          rule: { type: "object", additionalProperties: true, required: true },
+          exampleOpportunityCount: { type: "integer", required: true }
+        }
+      },
+      render: renderAsJson
+    }
+  }))
+
+  ctx.tools.register(defineTool({
+    name: "wechat_send_message",
+    description: "Dispatch a text reply through the wired WeChat bridge. Yellow-gated: without confirm=true it only returns the approval envelope; even with confirm=true it transmits only when a real iLink/ClawBot gateway is wired, otherwise it records the intent without sending.",
+    parameters: {
+      targetId: { type: "string", description: "The item id to reply to; its contactId is the recipient.", required: true },
+      text: { type: "string", description: "Exact message text to send.", required: true },
+      confirm: { type: "boolean", description: "Set true to actually dispatch; otherwise the tool only drafts + returns the approval envelope." }
+    },
+    async execute(args) {
+      const bridge = await resolveBridge(config, ctx)
+      const items = await bridge.listItems()
+      const item = items.find(candidate => candidate.id === args.targetId)
+      if (!item) {
+        throw new Error(`Unknown reply target: ${args.targetId}`)
+      }
+      const toUserId = item.contactId ?? item.senderId ?? item.id
+      const approval = buildApprovalEnvelope({
+        type: "send_message",
+        targetId: args.targetId,
+        toUserId,
+        draft: args.text
+      })
+
+      if (!args.confirm) {
+        return {
+          sent: false,
+          approval,
+          result: null,
+          note: "Yellow gate: confirm=true is required to dispatch."
+        }
+      }
+
+      const result = await bridge.sendText({ toUserId, text: args.text })
+      return {
+        sent: result.delivered === true,
+        approval,
+        result,
+        note: result.delivered === true ? "" : "record-only: no live gateway wired, reply not transmitted"
+      }
+    },
+    presentCall: args => ({ card: "generic", title: "Send WeChat reply", kind: "other", rawInput: args }),
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          sent: { type: "boolean", required: true },
+          approval: { type: "object", additionalProperties: true, required: true },
+          result: { type: "json" },
+          note: { type: "string", required: true }
+        }
+      },
+      render: renderAsJson
+    }
   }))
 }
