@@ -10,6 +10,24 @@ Once installed, the one line that drives everything:
 
 The plugin ships a built-in "微信总管" persona: that phrase triggers `digest → rank → draft → confirm-before-send`. Sending is Yellow-gated and **never fires automatically**.
 
+## 🚀 Fastest: 3 steps to a real WeChat
+
+```sh
+# 1) clone + install
+git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git && cd deepseek-wechat-operator && npm install
+
+# 2) one-command bring-up (installs Bun locally, clones the gateway, starts the bridge),
+#    then open http://127.0.0.1:3470 and scan the QR once
+bash scripts/wechat-up.sh
+
+# 3) mount into dsh; after restarting, say "总管帮我看一下微信" in a new session
+./integration/install-into-dsh.sh --apply
+npm run doctor   # should be all green
+```
+
+> The QR authorizes a **bot identity** of your WeChat: 1:1, no groups, only messages that arrive after login, and every send is confirmed first — that is Tencent's iLink channel, by design.
+> The "Quick start" below is the mock (no real WeChat) smoke test; full real-WeChat details: [docs/use-with-ilink-gateway.md](./docs/use-with-ilink-gateway.md).
+
 ---
 
 ## Quick start
@@ -27,11 +45,14 @@ npm run demo:json # digest / rank / opportunity extraction over built-in fixture
 ### 2 · Mount it into dsh (`mock` mode first)
 
 ```sh
-# with the dsh CLI:
+# Recommended: one-shot helper (dry-run by default; add --apply to install):
+./integration/install-into-dsh.sh --mode mock --apply
+
+# dsh CLI (run from this repo's root):
 dsh plugin --profile web add "file:$PWD"
 
-# or manually (DSH_HOME defaults to ~/.dsh):
-cd "$DSH_HOME/profiles/web" && pnpm add "file:$PWD"
+# manual (DSH_HOME defaults to ~/.dsh; capture the repo path BEFORE cd):
+REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" && pnpm add "file:$REPO"
 ```
 
 Then write `$DSH_HOME/profiles/web/cordis.patch.yml`:
@@ -46,7 +67,7 @@ Then write `$DSH_HOME/profiles/web/cordis.patch.yml`:
         minimumScore: 0.45
 ```
 
-Restart dsh.
+Restart dsh, then verify the wiring with `npm run doctor`.
 
 ### 3 · Say the line in a new session
 

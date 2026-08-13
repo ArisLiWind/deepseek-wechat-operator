@@ -33,6 +33,7 @@
     "examples/**/*",
     "docs/**/*",
     "integration/**/*",
+    "scripts/**/*",
     "README.md",
     "README.zh.md",
     "LICENSE"
@@ -51,6 +52,8 @@
     "test": "node --test",
     "demo:json": "node ./src/demo.js",
     "bridge:dev": "node ./src/bridge-server.js",
+    "login": "node ./src/login-server.js",
+    "doctor": "node ./src/doctor.js",
     "demo:e2e": "node ./src/e2e-demo.js",
     "perf:demo": "node ./src/perf-demo.js",
     "pack:check": "npm pack --dry-run",
@@ -63,5 +66,8 @@
     "@deepseek-ai/cordis": "*",
     "@deepseek-ai/dsh-tools": "*",
     "@deepseek-ai/schemastery": "*"
+  },
+  "devDependencies": {
+    "qrcode": "^1.5.4"
   }
 }

@@ -10,6 +10,23 @@
 
 插件内置了「微信总管」人设：说这句话，它就自动 `digest → 排谁最该回 → 起草 → 发前确认`。发消息是 Yellow 门控，**绝不自动发**。
 
+## 🚀 最快上手：3 步接管真实微信
+
+```sh
+# ① 克隆 + 装依赖
+git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git && cd deepseek-wechat-operator && npm install
+
+# ② 一键拉起扫码登录（自动装 Bun、起网关、起桥接），打开 http://127.0.0.1:3470 扫一次码
+bash scripts/wechat-up.sh
+
+# ③ 挂进 dsh，重启后在新会话说「总管帮我看一下微信」
+./integration/install-into-dsh.sh --apply
+npm run doctor   # 应全绿
+```
+
+> 扫码授权的是你微信号的**机器人身份**：1:1、无群聊、只收登录后的新消息、发消息前必确认——这是腾讯 iLink 通道的规则，不是本仓库能改的。
+> 下方「三步开始」是不碰真微信的 mock 自测路径；真微信完整说明见 [docs/use-with-ilink-gateway.md](./docs/use-with-ilink-gateway.md)。
+
 ---
 
 ## 三步开始
@@ -29,11 +46,14 @@ npm run demo:json # 用内置假数据跑一遍 digest / 排序 / 机会提取
 把插件包装进你的 profile（指向本地仓库路径）：
 
 ```sh
-# 有 dsh CLI 的话：
+# 推荐：一键脚本（默认 dry-run，加 --apply 才真正写入）：
+./integration/install-into-dsh.sh --mode mock --apply
+
+# dsh CLI（在仓库根目录执行）：
 dsh plugin --profile web add "file:$PWD"
 
-# 或手动（DSH_HOME 默认 ~/.dsh）：
-cd "$DSH_HOME/profiles/web" && pnpm add "file:$PWD"
+# 手动（DSH_HOME 默认 ~/.dsh；先在 cd 之前把仓库路径存下来）：
+REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" && pnpm add "file:$REPO"
 ```
 
 再写入补丁 `$DSH_HOME/profiles/web/cordis.patch.yml`：
@@ -48,7 +68,7 @@ cd "$DSH_HOME/profiles/web" && pnpm add "file:$PWD"
         minimumScore: 0.45
 ```
 
-重启 dsh。
+重启 dsh，然后用 `npm run doctor` 验证接线。
 
 ### 第 3 步 · 新会话里说一句
 

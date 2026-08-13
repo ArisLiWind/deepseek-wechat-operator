@@ -3,3 +3,6 @@ node_modules
 .sessions
 coverage
 .deepseek-wechat-operator
+.run
+.bun
+*.tgz

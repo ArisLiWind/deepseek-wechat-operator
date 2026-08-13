@@ -24,6 +24,20 @@ function slugify(value) {
     .replace(/^-+|-+$/g, "") || "item"
 }
 
+// iLink bot messages carry only `from_user_id` (an opaque openid) — no display
+// name. Prefer a provided name; otherwise emit a friendly, still-distinguishable
+// label instead of leaking the raw openid into digests and drafts.
+function friendlySender(name, id) {
+  const display = String(name ?? "").trim()
+  if (display) return display
+  const uid = String(id ?? "").trim()
+  if (!uid) return "Unknown"
+  if (uid.includes("@") || uid.length > 24 || /^[a-z0-9_-]{20,}$/i.test(uid)) {
+    return `微信联系人(${uid.slice(0, 6)}…)`
+  }
+  return uid
+}
+
 function inferTopics(text) {
   const source = String(text ?? "").toLowerCase()
   const topics = []
@@ -151,7 +165,7 @@ function toMessageEnvelope(payload) {
   if (payload?.msg?.item_list) {
     return {
       messageId: payload.msg.client_id ?? payload.msg.msg_id ?? `ilink-${Date.now()}`,
-      sender: payload.sender ?? payload.msg.from_nickname ?? payload.msg.from_user_name ?? payload.msg.from_user_id ?? "Unknown",
+      sender: friendlySender(payload.sender ?? payload.msg.from_nickname ?? payload.msg.from_user_name, payload.msg.from_user_id),
       senderId: payload.msg.from_user_id ?? slugify(payload.msg.from_user_name ?? payload.msg.from_nickname),
       publishedAt: payload.publishedAt ?? payload.msg.create_time ?? new Date().toISOString(),
       contextToken: payload.msg.context_token ?? null,
@@ -184,7 +198,7 @@ function toMessageEnvelope(payload) {
   if (Array.isArray(payload?.item_list)) {
     return {
       messageId: payload.message_id ?? payload.messageId ?? `ilink-${Date.now()}`,
-      sender: payload.from_user_name ?? payload.from_nickname ?? payload.from_user_id ?? "Unknown",
+      sender: friendlySender(payload.from_user_name ?? payload.from_nickname, payload.from_user_id),
       senderId: payload.from_user_id ?? slugify(payload.from_user_name ?? payload.from_nickname),
       publishedAt: payload.create_time_ms
         ? new Date(Number(payload.create_time_ms)).toISOString()

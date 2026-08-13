@@ -43,3 +43,15 @@ test("normalizes WeixinMessage file/image/video item types", () => {
   assert.equal(normalized.accessibleItems[1].fileName, "deck.pdf")
   assert.equal(normalized.accessibleItems[2].mediaType, "video")
 })
+
+test("falls back to a friendly label when the WeixinMessage has no display name", () => {
+  const normalized = normalizeInboundPayload({
+    message_id: "real-msg-003",
+    from_user_id: "o9cq805gvZ-LPhxQJl_jsQPMKodM@im.wechat",
+    context_token: "CTX-REAL-003",
+    item_list: [{ type: 1, text_item: { text: "hi" } }]
+  })
+
+  assert.equal(normalized.accessibleItems[0].sender, "微信联系人(o9cq80…)")
+  assert.equal(normalized.accessibleItems[0].contactId, "o9cq805gvZ-LPhxQJl_jsQPMKodM@im.wechat")
+})

@@ -150,6 +150,12 @@ function buildReplyReason(item) {
   return reasons.join(", ") || "worth a thoughtful response"
 }
 
+function greeting(sender) {
+  const s = String(sender ?? "").trim()
+  if (!s || s.includes("@") || s.includes("微信联系人")) return "Hi there"
+  return `Hi ${s}`
+}
+
 export function prepareReply(items, targetId, goal, constraints = []) {
   const item = items.find(candidate => candidate.id === targetId)
   if (!item) {
@@ -164,7 +170,7 @@ export function prepareReply(items, targetId, goal, constraints = []) {
   return {
     targetId,
     sender: item.sender,
-    draft: `Hi ${item.sender}, thanks for the note. I am interested in this. ${constraintLine} Before we lock anything in, could you share the budget range, expected timeline, and what success would look like from your side?`,
+    draft: `${greeting(item.sender)}, thanks for the note. I am interested in this. ${constraintLine} Before we lock anything in, could you share the budget range, expected timeline, and what success would look like from your side?`,
     intent: goalLine
   }
 }

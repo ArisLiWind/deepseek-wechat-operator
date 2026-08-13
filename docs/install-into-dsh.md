@@ -73,6 +73,11 @@ does not pick the new tools up, restart the dsh process (a restart is required
 for a *new* profile's package dependency to load, since the plugin module is
 imported at mount time).
 
+Verify the whole chain with `npm run doctor` — it checks Node, the repo, the
+profile, the patch, whether the plugin is resolvable, and the bridge/gateway,
+then prints the next missing step in order. Run it again after a restart; all
+hard checks should pass.
+
 You should now see, in the agent's tool catalog:
 
 - `wechat_digest_world`

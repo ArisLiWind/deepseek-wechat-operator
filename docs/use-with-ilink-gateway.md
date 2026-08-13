@@ -4,6 +4,27 @@ This repo ships **no WeChat transport**. To actually send and receive real
 微信 messages you run a separate gateway that speaks Tencent's **iLink Bot
 protocol** (the "ClawBot" channel), and point it at this bridge.
 
+## Quick start (verified one-command path)
+
+```sh
+bash scripts/wechat-up.sh   # installs Bun locally, clones the gateway, starts everything
+```
+
+Then open the printed login URL (`http://127.0.0.1:3470`), scan the QR **once**
+with WeChat, and confirm on the phone. The gateway long-polls WeChat and pushes
+each inbound message to the bridge at `:3468/ingest/ilink`; the dsh plugin reads
+from the bridge. Stop with `bash scripts/wechat-down.sh`.
+
+If the gateway is already running, just serve the login page:
+
+```sh
+GATEWAY_API_KEY=<key> npm run login
+```
+
+`wechat-up.sh` installs Bun **into the repo's `.bun/`** (never touches `~/.bun`),
+and clones the gateway to `../weixin-ilink-gateway` unless `GATEWAY_DIR` says
+otherwise.
+
 ## What the research established (Aug 2026)
 
 - The iLink protocol is Tencent's official, QR-login **bot** channel
