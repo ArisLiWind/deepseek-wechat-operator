@@ -9,7 +9,11 @@ const EXPECTED_TOOLS = [
   "wechat_rank_replies",
   "wechat_prepare_reply",
   "wechat_plan_automation",
-  "wechat_send_message"
+  "wechat_send_message",
+  "wechat_desktop_status",
+  "wechat_desktop_focus",
+  "wechat_desktop_read",
+  "wechat_desktop_send"
 ]
 
 function mountPlugin(config) {
@@ -38,7 +42,7 @@ test("apply injects the 微信总管 persona prompt that teaches the trigger", (
   assert.match(sections[0].text, /confirm:true/)
 })
 
-test("apply registers all six tools, each with output.render and output.schema", () => {
+test("apply registers all ten tools, each with output.render and output.schema", () => {
   const { tools } = mountPlugin(Config({ mode: "mock" }))
   assert.deepEqual(tools.map(tool => tool.name), EXPECTED_TOOLS)
   for (const tool of tools) {
@@ -86,4 +90,15 @@ test("wechat_send_message with confirm is record-only in mock mode", async () =>
   assert.equal(value.sent, false)
   assert.equal(value.result.mode, "record-only")
   assert.equal(value.result.delivered, false)
+})
+
+test("wechat_desktop_send is yellow-gated: no dispatch without confirm", async () => {
+  const { tools } = mountPlugin(Config({ mode: "mock" }))
+  const send = tools.find(tool => tool.name === "wechat_desktop_send")
+  const value = await send.execute({ contact: "张三", text: "hi" }, {})
+  assert.equal(value.sent, false)
+  assert.equal(value.result, null)
+  assert.equal(value.approval.requiresApproval, true)
+  assert.equal(value.approval.level, "yellow")
+  assert.equal(value.approval.action.type, "desktop_send")
 })

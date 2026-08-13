@@ -12,13 +12,17 @@ export function classifyAction(action) {
     "summarize",
     "rank_items",
     "extract_table",
-    "save_memory"
+    "save_memory",
+    "desktop_read",
+    "desktop_status",
+    "desktop_focus"
   ].includes(type)) {
     return POLICY.GREEN
   }
 
   if ([
     "send_message",
+    "desktop_send",
     "forward_file",
     "create_calendar_event",
     "edit_task",

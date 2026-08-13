@@ -49,7 +49,7 @@ npm run doctor   # 应全绿；若 patch/resolve 还打叉，说明 dsh 还没�
 git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git
 cd deepseek-wechat-operator
 npm install
-npm test          # 27 个测试全过 = 插件能正确加载、能执行
+npm test          # 37 个测试全过 = 插件能正确加载、能执行
 npm run demo:json # 用内置假数据跑一遍 digest / 排序 / 机会提取
 ```
 
@@ -92,7 +92,7 @@ REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" &&
 
 ## 它能做什么
 
-6 个工具（`src/index.js` 注册）：
+10 个工具（`src/index.js` 注册）：
 
 | 工具 | 作用 | 门控 |
 |---|---|---|
@@ -101,7 +101,11 @@ REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" &&
 | `wechat_rank_replies` | 排谁最值得回复 | Green |
 | `wechat_prepare_reply` | 给目标起草回复 + 返回审批级别 | Green |
 | `wechat_plan_automation` | 把筛选意图转成自动化规则草稿 | Green |
-| `wechat_send_message` | 真正发出回复 | **Yellow**（需 `confirm:true`） |
+| `wechat_send_message` | 通过 iLink 网关发出回复 | **Yellow**（需 `confirm:true`） |
+| `wechat_desktop_status` | 自检桌面微信自动化环境 | Green |
+| `wechat_desktop_focus` | 把微信客户端带到前台 | Green |
+| `wechat_desktop_read` | 截图 + OCR 读当前屏幕 | Green |
+| `wechat_desktop_send` | 在微信客户端里输入并发送 | **Yellow**（需 `confirm:true`） |
 
 **诚实边界（重要）：**
 
@@ -111,7 +115,10 @@ REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" &&
 
 ## 仓库结构
 
-- [`src/index.js`](./src/index.js)：dsh 插件入口（6 个工具 + 微信总管人设）
+- [`src/index.js`](./src/index.js)：dsh 插件入口（10 个工具 + 微信总管人设）
+- [`src/desktop.js`](./src/desktop.js)：桌面 UI 自动化控制器（驱动本机 WeChat.app）
+- [`src/ocr.swift`](./src/ocr.swift)：Vision 框架 OCR 源（`npm run build:ocr` 编译）
+- [`scripts/build-ocr.sh`](./scripts/build-ocr.sh)：编译 OCR 的脚本
 - [`src/outbound.js`](./src/outbound.js)：出站适配器（`record-only` 默认 / `ilink-gateway` 真发送）
 - [`src/normalize.js`](./src/normalize.js)：把 iLink `WeixinMessage` 归一化成可读对象
 - [`src/bridge-server.js`](./src/bridge-server.js)：本地 HTTP 桥接层
@@ -122,10 +129,26 @@ REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" &&
 - [`integration/install-into-dsh.sh`](./integration/install-into-dsh.sh)：一键接入脚本（默认 dry-run）
 - [`docs/install-into-dsh.md`](./docs/install-into-dsh.md)：接入 dsh 的完整步骤
 - [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)：接真实 iLink/ClawBot 网关
+- [`docs/desktop-ui-automation.md`](./docs/desktop-ui-automation.md)：桌面 UI 自动化控制你自己的微信
 
 ## 接真实微信（bridge 模式）
 
 最快路径就是上面的 `bash scripts/wechat-up.sh`（自动装 Bun、起网关、起桥接、扫码登录）。手动分步方式和出站配置见 [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)。
+
+## 控制你自己的微信（桌面 UI 自动化）
+
+上面的 iLink 通道控制的是一个**独立 bot 身份**，碰不到你本人的微信。如果你要的是操作**你自己登录的微信客户端**（你的私聊、群），插件还内置了桌面 UI 自动化：用 macOS 辅助功能 + 屏幕录制驱动本机的 WeChat.app——输入消息、点发送、截图 OCR 读屏。这是界面自动化（RPA），不是逆向、不是 Hook。
+
+```sh
+brew install cliclick
+npm run build:ocr          # 用系统自带 Vision 框架编译 OCR（零下载）
+```
+
+在「系统设置 → 隐私与安全性」给运行 dsh 的终端开**辅助功能**和**屏幕录制**两个权限，重启终端。然后对话里说：
+
+> 给文件传输助手发一句「测试」—— 会先起草、跟你确认，你点头才发（Yellow 门控）。
+
+四个工具 `wechat_desktop_status / focus / read / send` 已在上面的工具表里。完整说明见 [`docs/desktop-ui-automation.md`](./docs/desktop-ui-automation.md)。
 
 ## 权限模型
 

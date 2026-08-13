@@ -50,7 +50,7 @@ npm run doctor   # should be all green; if patch/resolve are still ✗, dsh hasn
 git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git
 cd deepseek-wechat-operator
 npm install
-npm test          # 27 tests pass = the plugin loads and every tool executes
+npm test          # 37 tests pass = the plugin loads and every tool executes
 npm run demo:json # digest / rank / opportunity extraction over built-in fixtures
 ```
 
@@ -91,7 +91,7 @@ It runs the full chain over the `mock` fixtures (proving the plugin works — no
 
 ## What it can do
 
-Six tools (registered in [`src/index.js`](./src/index.js)):
+Ten tools (registered in [`src/index.js`](./src/index.js)):
 
 | Tool | Purpose | Gate |
 |---|---|---|
@@ -100,7 +100,11 @@ Six tools (registered in [`src/index.js`](./src/index.js)):
 | `wechat_rank_replies` | Rank who is most worth replying to | Green |
 | `wechat_prepare_reply` | Draft a reply + return its approval level | Green |
 | `wechat_plan_automation` | Turn a filter intent into a rule draft | Green |
-| `wechat_send_message` | Actually send a reply | **Yellow** (`confirm:true` required) |
+| `wechat_send_message` | Send a reply through the iLink gateway | **Yellow** (`confirm:true` required) |
+| `wechat_desktop_status` | Check the desktop WeChat automation environment | Green |
+| `wechat_desktop_focus` | Bring the WeChat desktop app to the front | Green |
+| `wechat_desktop_read` | Screenshot + OCR the current screen | Green |
+| `wechat_desktop_send` | Type + send inside the WeChat desktop app | **Yellow** (`confirm:true` required) |
 
 **Honest scope (read this):**
 
@@ -110,7 +114,10 @@ Six tools (registered in [`src/index.js`](./src/index.js)):
 
 ## Repository layout
 
-- [`src/index.js`](./src/index.js): dsh plugin entry (six tools + the 微信总管 persona)
+- [`src/index.js`](./src/index.js): dsh plugin entry (ten tools + the 微信总管 persona)
+- [`src/desktop.js`](./src/desktop.js): desktop UI-automation controller (drives the local WeChat.app)
+- [`src/ocr.swift`](./src/ocr.swift): Vision-framework OCR source (`npm run build:ocr`)
+- [`scripts/build-ocr.sh`](./scripts/build-ocr.sh): compiles the OCR helper
 - [`src/outbound.js`](./src/outbound.js): outbound adapter (`record-only` default / `ilink-gateway` real send)
 - [`src/normalize.js`](./src/normalize.js): normalize iLink `WeixinMessage` into readable items
 - [`src/bridge-server.js`](./src/bridge-server.js): local HTTP bridge
@@ -125,6 +132,21 @@ Six tools (registered in [`src/index.js`](./src/index.js)):
 ## Real WeChat (bridge mode)
 
 The fastest path is `bash scripts/wechat-up.sh` above (installs Bun, clones the gateway, starts the bridge, and logs you in via QR). For the manual step-by-step and outbound config, see [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md).
+
+## Control your own WeChat (desktop UI automation)
+
+The iLink channel controls a **separate bot identity** — it can never touch your own chats or groups. To drive **your own logged-in WeChat** instead, the plugin also ships desktop UI automation: it types and clicks inside the local WeChat.app via macOS Accessibility + Screen Recording, and reads the screen back with OCR. This is RPA (interface automation) — not reverse-engineering, not hooking.
+
+```sh
+brew install cliclick
+npm run build:ocr          # compiles the OCR helper with the built-in Vision framework
+```
+
+Grant **Accessibility** and **Screen Recording** to the terminal that runs dsh (System Settings → Privacy & Security), restart the terminal, then say:
+
+> Send "test" to File Transfer Assistant — it drafts, confirms with you, and only sends when you approve (Yellow gate).
+
+The four tools `wechat_desktop_status / focus / read / send` are in the table above. Full details: [`docs/desktop-ui-automation.md`](./docs/desktop-ui-automation.md).
 
 ## Permission model
 
@@ -143,6 +165,7 @@ Runs `node --test`, `demo`, `e2e-demo`, `perf-demo`, and `npm pack --dry-run`. C
 ## Docs
 
 - Gateway integration: [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)
+- Desktop UI automation: [`docs/desktop-ui-automation.md`](./docs/desktop-ui-automation.md)
 - dsh install: [`docs/install-into-dsh.md`](./docs/install-into-dsh.md)
 - Product brief: [`docs/product.md`](./docs/product.md)
 - Architecture: [`docs/architecture.md`](./docs/architecture.md)

@@ -4,6 +4,7 @@ import { buildDailyDigest, extractOpportunities, planAutomationRule, prepareRepl
 import { WechatOperatorBridge } from "./bridge-service.js"
 import { getDemoFixtures } from "./fixtures.js"
 import { buildApprovalEnvelope } from "./policy.js"
+import { DesktopWechatController } from "./desktop.js"
 
 export const name = "deepseek-wechat-operator"
 export const inject = ["tools", "systemPrompt"]
@@ -14,7 +15,13 @@ export const Config = z.object({
   minimumScore: z.number().default(0.45),
   bridgeUrl: z.string().default(""),
   bridgeApiKey: z.string().default(""),
-  bridgeStoragePath: z.string().default("")
+  bridgeStoragePath: z.string().default(""),
+  desktop: z.object({
+    cliclickPath: z.string().default(""),
+    ocrPath: z.string().default(""),
+    wechatApp: z.string().default("WeChat"),
+    screenshotPath: z.string().default("")
+  }).default({})
 })
 
 // dsh-tools requires every tool to declare an `output.render`, which turns the
@@ -81,6 +88,13 @@ async function resolveItems(config, ctx) {
 }
 
 export function apply(ctx, config) {
+  const desktop = new DesktopWechatController({
+    cliclickPath: config.desktop?.cliclickPath || undefined,
+    ocrPath: config.desktop?.ocrPath || undefined,
+    wechatApp: config.desktop?.wechatApp || "WeChat",
+    screenshotPath: config.desktop?.screenshotPath || undefined
+  })
+
   ctx.systemPrompt.section({
     name: "wechat-operator",
     order: 500,
@@ -91,7 +105,15 @@ export function apply(ctx, config) {
 3. wechat_prepare_reply — draft a reply for the top candidate.
 4. wechat_send_message — actually send, and ONLY after the user explicitly approves the exact text (pass confirm:true). Never send automatically.
 
-Hard rule: sending is a Yellow action. Always confirm the exact message text with the user first. Read-only tools (digest/find/rank/prepare) may run immediately.`
+Hard rule: sending is a Yellow action. Always confirm the exact message text with the user first. Read-only tools (digest/find/rank/prepare) may run immediately.
+
+To control the user's OWN WeChat desktop client (their real account, not the bot), use the wechat_desktop_* tools:
+- wechat_desktop_status — check the local environment (WeChat.app, cliclick, screen-recording permission, OCR binary).
+- wechat_desktop_focus — bring WeChat to the front.
+- wechat_desktop_read — screenshot + OCR the current screen to read what is visible.
+- wechat_desktop_send — type + send a message to a contact; also a Yellow action, confirm the exact contact + text first.
+
+These drive the locally installed WeChat app on macOS and require Accessibility + Screen Recording permissions plus a compiled OCR binary. If wechat_desktop_status reports a missing piece, tell the user what to enable instead of claiming control that is not wired.`
   })
 
   ctx.tools.register(defineTool({
@@ -302,6 +324,81 @@ Hard rule: sending is a Yellow action. Always confirm the exact message text wit
       }
     },
     presentCall: args => ({ card: "generic", title: "Send WeChat reply", kind: "other", rawInput: args }),
+    output: {
+      schema: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          sent: { type: "boolean", required: true },
+          approval: { type: "object", additionalProperties: true, required: true },
+          result: { type: "json" },
+          note: { type: "string", required: true }
+        }
+      },
+      render: renderAsJson
+    }
+  }))
+
+  // --- Desktop UI automation: drive the locally installed WeChat.app ---
+  ctx.tools.register(defineTool({
+    name: "wechat_desktop_status",
+    description: "Check the local desktop WeChat automation environment: WeChat.app present, cliclick, screen-recording permission, and OCR binary. Read-only.",
+    parameters: {},
+    async execute() {
+      return { ok: true, ...await desktop.status() }
+    },
+    presentCall: () => ({ card: "generic", title: "Check desktop WeChat", kind: "other" }),
+    output: {
+      schema: { type: "object", additionalProperties: true, properties: { ok: { type: "boolean", required: true } } },
+      render: renderAsJson
+    }
+  }))
+
+  ctx.tools.register(defineTool({
+    name: "wechat_desktop_focus",
+    description: "Bring the locally installed WeChat desktop app to the front. Read-only.",
+    parameters: {},
+    async execute() {
+      return desktop.activate()
+    },
+    presentCall: () => ({ card: "generic", title: "Focus WeChat", kind: "other" }),
+    output: {
+      schema: { type: "object", additionalProperties: true, properties: { ok: { type: "boolean", required: true } } },
+      render: renderAsJson
+    }
+  }))
+
+  ctx.tools.register(defineTool({
+    name: "wechat_desktop_read",
+    description: "Screenshot the current screen and OCR it to read what is visible in WeChat right now. Best effort; returns raw text. Read-only.",
+    parameters: {},
+    async execute() {
+      return desktop.read()
+    },
+    presentCall: () => ({ card: "generic", title: "Read WeChat screen", kind: "other" }),
+    output: {
+      schema: { type: "object", additionalProperties: true, properties: { ok: { type: "boolean", required: true }, text: { type: "string", required: true } } },
+      render: renderAsJson
+    }
+  }))
+
+  ctx.tools.register(defineTool({
+    name: "wechat_desktop_send",
+    description: "Type a message into the locally installed WeChat desktop app and send it to a contact. Yellow-gated: without confirm=true it only returns the approval envelope; with confirm=true it types and sends for real.",
+    parameters: {
+      contact: { type: "string", description: "Contact name/note exactly as shown in WeChat search.", required: true },
+      text: { type: "string", description: "Exact message text to type and send.", required: true },
+      confirm: { type: "boolean", description: "Set true to actually type + send; otherwise only the approval envelope is returned." }
+    },
+    async execute(args) {
+      const approval = buildApprovalEnvelope({ type: "desktop_send", contact: args.contact, text: args.text })
+      if (!args.confirm) {
+        return { sent: false, approval, result: null, note: "Yellow gate: confirm=true is required to dispatch." }
+      }
+      const result = await desktop.send({ contact: args.contact, text: args.text })
+      return { sent: true, approval, result, note: "" }
+    },
+    presentCall: args => ({ card: "generic", title: "Send WeChat message (desktop)", kind: "other", rawInput: args }),
     output: {
       schema: {
         type: "object",
