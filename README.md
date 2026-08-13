@@ -1,166 +1,141 @@
 # DeepSeek WeChat Operator
 
-English | [中文](./README.zh.md)
+English · [中文](./README.zh.md) · [CI](https://github.com/ArisLiWind/deepseek-wechat-operator/actions/workflows/ci.yml) · [MIT](./LICENSE)
 
-`DeepSeek WeChat Operator` gives you a natural-language way to operate your WeChat information flow on top of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Feed it **accessible, user-authorized WeChat information** and you can immediately do things like:
+Give the agent inside [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (`dsh`) a WeChat butler: read, filter, rank, and draft replies — and **stop to confirm before sending**.
 
-- `Ask`: ask questions about your WeChat world
-- `Find`: locate messages, files, links, and opportunities
-- `Digest`: compress a noisy day into the 10 things that matter
-- `Act`: draft or queue actions with approval gates
-- `Automate`: define long-term filters and routines
+Once installed, the one line that drives everything:
 
-With DeepSeek Harness underneath, this project turns WeChat-facing inputs into an Agent workflow layer for reading, filtering, searching, summarizing, planning, and preparing actions.
+> **总管，帮我看一下微信。** ("Butler, check my WeChat for me.")
 
-## Positioning
+The plugin ships a built-in "微信总管" persona: that phrase triggers `digest → rank → draft → confirm-before-send`. Sending is Yellow-gated and **never fires automatically**.
 
-> DeepSeek for WeChat — Read everything that matters. Do what needs to be done.
+---
 
-Chinese:
+## Quick start
 
-> 让 DeepSeek 接管你的微信信息工作。
-
-The first version works on a concrete, practical surface:
-
-- content the user forwards to the agent
-- official bot-channel events that are actually delivered
-- public links the user authorizes the agent to fetch
-- files, images, PDFs, spreadsheets, and voice notes the user explicitly provides
-
-## What ships in this repository
-
-- A publishable `dsh` plugin entry at [`src/index.js`](./src/index.js)
-- Ranking, digest, reply, and opportunity extraction logic in [`src/domain.js`](./src/domain.js)
-- A clear action-policy gate in [`src/policy.js`](./src/policy.js)
-- A real event bridge with local persistence in [`src/bridge-server.js`](./src/bridge-server.js) and [`src/bridge-service.js`](./src/bridge-service.js)
-- Payload normalization for iLink-compatible inbound events in [`src/normalize.js`](./src/normalize.js)
-- A built-in mock data mode for product demos in [`src/fixtures.js`](./src/fixtures.js)
-- A polished command-center demo in [`web/index.html`](./web/index.html)
-- A sample `dsh` overlay in [`examples/cordis.patch.yml`](./examples/cordis.patch.yml)
-- A bridge-mode `dsh` overlay in [`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml)
-- Launch assets in [`assets/`](./assets)
-
-## First-version hero feature
-
-The hero feature is not "control WeChat."
-
-It is:
-
-**Compress my WeChat world into the 10 things actually worth my attention today.**
-
-That can include:
-
-- articles worth reading
-- people worth replying to
-- opportunities worth tracking
-- files worth saving
-- facts worth remembering
-- actions worth taking
-
-## Architecture
-
-```text
-DeepSeek WeChat Operator
-  User Intent
-      |
-      v
-  Agent Orchestrator
-      |
-      +--> Memory
-      +--> Planner
-      +--> Policy Gate
-      |
-      v
-  Tool Registry
-      |
-      +--> WeChat Tools
-      +--> Content Tools
-      +--> External Tools
-      |
-      v
-  Action Ledger
-```
-
-The most important parts are not the model alone, but the **Tool Registry**, **Policy Gate**, and **Memory** layer.
-
-## Permission model
-
-- `Green`: auto-run read, summarize, classify, dedupe, save, and knowledge-base updates
-- `Yellow`: require approval before outbound messages, forwards, task edits, calendar writes, or bulk actions
-- `Red`: always hard-confirm payments, destructive deletes, public posting, sensitive file sends, or account-security actions
-
-## Plugin tools
-
-This repo registers a first practical surface:
-
-- `wechat_digest_world`
-- `wechat_find`
-- `wechat_rank_replies`
-- `wechat_prepare_reply`
-- `wechat_plan_automation`
-- `wechat_send_message`
-
-The current implementation is intentionally honest:
-
-- a built-in `mock` mode works today for demos and product iteration
-- a `bridge` mode accepts real inbound events through a local HTTP bridge,
-  including the raw iLink `WeixinMessage` shape (`item_list`, text/image/voice/
-  file/video)
-- outbound is `record-only` by default (the reply is persisted, never sent);
-  set `WECHAT_OPERATOR_OUTBOUND=ilink-gateway` to actually dispatch replies to a
-  real iLink/ClawBot gateway
-- reply validation respects the iLink constraint that outbound replies require a
-  cached inbound `context_token`
-
-## Install
-
-After publishing this package:
+### 1 · Prove it runs (no dsh, no WeChat needed)
 
 ```sh
-pnpm add dsh-plugin-deepseek-wechat-operator
+git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git
+cd deepseek-wechat-operator
+npm install
+npm test          # 22 tests pass = the plugin loads and every tool executes
+npm run demo:json # digest / rank / opportunity extraction over built-in fixtures
 ```
 
-Then add the overlay from [`examples/cordis.patch.yml`](./examples/cordis.patch.yml) to your `dsh` profile.
-
-For bridge-backed usage:
+### 2 · Mount it into dsh (`mock` mode first)
 
 ```sh
-WECHAT_OPERATOR_API_KEY=demo-key npm run bridge:dev
+# with the dsh CLI:
+dsh plugin --profile web add "file:$PWD"
+
+# or manually (DSH_HOME defaults to ~/.dsh):
+cd "$DSH_HOME/profiles/web" && pnpm add "file:$PWD"
 ```
 
-Then ingest an iLink-style event:
+Then write `$DSH_HOME/profiles/web/cordis.patch.yml`:
+
+```yaml
+- insert:
+    - id: deepseek-wechat-operator
+      name: dsh-plugin-deepseek-wechat-operator
+      config:
+        mode: mock
+        digestLimit: 10
+        minimumScore: 0.45
+```
+
+Restart dsh.
+
+### 3 · Say the line in a new session
+
+> **总管，帮我看一下微信。**
+
+It runs the full chain over the `mock` fixtures (proving the plugin works — not your real WeChat). Full install details: [`docs/install-into-dsh.md`](./docs/install-into-dsh.md).
+
+---
+
+## What it can do
+
+Six tools (registered in [`src/index.js`](./src/index.js)):
+
+| Tool | Purpose | Gate |
+|---|---|---|
+| `wechat_digest_world` | Compress today's items into the few that matter | Green |
+| `wechat_find` | Find messages/files/people/opportunities by keyword | Green |
+| `wechat_rank_replies` | Rank who is most worth replying to | Green |
+| `wechat_prepare_reply` | Draft a reply + return its approval level | Green |
+| `wechat_plan_automation` | Turn a filter intent into a rule draft | Green |
+| `wechat_send_message` | Actually send a reply | **Yellow** (`confirm:true` required) |
+
+**Honest scope (read this):**
+
+- `mock` mode reads built-in **fake data**, for demos and iteration.
+- `bridge` mode reads real inbound events, but outbound is **`record-only` by default** — replies are persisted, never sent.
+- Actually **sending** to WeChat requires a separate iLink/ClawBot gateway (install Bun + scan a QR), see [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md). This repo does not fake that step.
+
+## Repository layout
+
+- [`src/index.js`](./src/index.js): dsh plugin entry (six tools + the 微信总管 persona)
+- [`src/outbound.js`](./src/outbound.js): outbound adapter (`record-only` default / `ilink-gateway` real send)
+- [`src/normalize.js`](./src/normalize.js): normalize iLink `WeixinMessage` into readable items
+- [`src/bridge-server.js`](./src/bridge-server.js): local HTTP bridge
+- [`src/bridge-service.js`](./src/bridge-service.js): bridge client
+- [`src/domain.js`](./src/domain.js): pure digest/find/rank/draft logic
+- [`src/policy.js`](./src/policy.js): Green/Yellow/Red action policy
+- [`integration/agent.cordis.patch.yml`](./integration/agent.cordis.patch.yml): ready-to-apply dsh patch
+- [`integration/install-into-dsh.sh`](./integration/install-into-dsh.sh): one-shot install helper (dry-run by default)
+- [`docs/install-into-dsh.md`](./docs/install-into-dsh.md): dsh install steps
+- [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md): wiring a real iLink/ClawBot gateway
+
+## Real WeChat (bridge mode)
+
+```sh
+cd deepseek-wechat-operator
+WECHAT_OPERATOR_API_KEY=demo-key npm run bridge:dev   # http://127.0.0.1:3468
+```
+
+Push a real-format inbound event:
 
 ```sh
 curl -X POST http://127.0.0.1:3468/ingest/ilink \
-  -H 'Authorization: Bearer demo-key' \
-  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer demo-key' -H 'Content-Type: application/json' \
   --data @examples/bridge-event.ilink.json
 ```
 
-And point `dsh` at the bridge via [`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml).
+Switch the patch to `mode: bridge` ([`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml)) and ask "what are the 10 most important things today".
+
+To actually send, also configure outbound:
+
+```sh
+WECHAT_OPERATOR_OUTBOUND=ilink-gateway \
+ILINK_GATEWAY_SEND_URL=http://127.0.0.1:3456/messages/send \
+ILINK_GATEWAY_API_KEY=<gateway key> \
+npm run bridge:dev
+```
+
+Full chain: [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md).
+
+## Permission model
+
+- `Green`: read, summarize, classify, search, dedupe, save — auto-run
+- `Yellow`: outbound messages, forwards, task edits, calendar writes, bulk actions — **confirm first**
+- `Red`: payments, destructive deletes, public posting, sensitive sends, account security — hard-confirm
 
 ## Local validation
 
 ```sh
-node --test
-node ./src/demo.js
-npm run demo:e2e
-npm pack --dry-run
+npm run check
 ```
 
-## Repo publishing checklist
-
-- Add the `dsh-plugin` topic
-- Publish the npm package publicly
-- Include launch assets from [`assets/`](./assets)
-- Document the supported data boundary clearly
-- Do not market unsupported personal-WeChat powers
+Runs `node --test`, `demo`, `e2e-demo`, `perf-demo`, and `npm pack --dry-run`. CI runs the same on push/PR.
 
 ## Docs
 
+- Gateway integration: [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)
+- dsh install: [`docs/install-into-dsh.md`](./docs/install-into-dsh.md)
 - Product brief: [`docs/product.md`](./docs/product.md)
 - Architecture: [`docs/architecture.md`](./docs/architecture.md)
-- Gateway integration: [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)
 - Performance notes: [`docs/performance.md`](./docs/performance.md)
 - Roadmap: [`docs/roadmap.md`](./docs/roadmap.md)
-- X post draft: [`docs/x-post.md`](./docs/x-post.md)
