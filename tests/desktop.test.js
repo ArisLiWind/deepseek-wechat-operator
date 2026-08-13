@@ -55,7 +55,7 @@ test("send requires contact and text", async () => {
 test("status reports each capability with actionable hints", async () => {
   const calls = []
   const ctrl = new DesktopWechatController({
-    execFile: fakeExec(calls, { fail: (cmd) => cmd.includes("cliclick") || cmd.includes("screencapture") }),
+    execFile: fakeExec(calls, { fail: (cmd) => cmd.includes("osascript") || cmd.includes("screencapture") }),
     cliclickPath: "/fake/cliclick",
     ocrPath: "/fake/ocr-missing",
     sleep: instant
@@ -63,9 +63,11 @@ test("status reports each capability with actionable hints", async () => {
   const report = await ctrl.status()
   assert.ok("wechatApp" in report)
   assert.ok("cliclick" in report)
+  assert.ok("accessibility" in report)
   assert.ok("screenshot" in report)
   assert.ok("ocr" in report)
-  assert.match(report.cliclick, /辅助功能/)
+  assert.match(report.cliclick, /brew install cliclick/)
+  assert.match(report.accessibility, /辅助功能/)
   assert.match(report.screenshot, /屏幕录制/)
   assert.match(report.ocr, /build-ocr/)
 })

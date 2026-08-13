@@ -98,11 +98,17 @@ export class DesktopWechatController {
       ? "ok"
       : `未找到 /Applications/${this.wechatApp}.app`
 
+    report.cliclick = existsSync(this.cliclickPath)
+      ? "ok"
+      : "未安装，先跑 brew install cliclick"
+
+    // Accessibility: System Events UI scripting is the authoritative read-only probe
+    // (`cliclick p` only reads the cursor, so it would false-positive as "ok").
     try {
-      await this.sh(this.cliclickPath, ["p"])
-      report.cliclick = "ok"
-    } catch (error) {
-      report.cliclick = `需要「辅助功能」权限：${error.message}`
+      await this.sh("/usr/bin/osascript", ["-e", 'tell application "System Events" to get name of first application process'])
+      report.accessibility = "ok"
+    } catch {
+      report.accessibility = "需要「辅助功能」权限"
     }
 
     try {
