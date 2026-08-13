@@ -10,6 +10,17 @@ Once installed, the one line that drives everything:
 
 The plugin ships a built-in "微信总管" persona: that phrase triggers `digest → rank → draft → confirm-before-send`. Sending is Yellow-gated and **never fires automatically**.
 
+## Prerequisites
+
+- **Node.js ≥ 22** (check with `node -v`)
+- **macOS or Linux** (`wechat-up.sh` is a bash script; on Windows use WSL)
+- **git** and **curl**
+- **DeepSeek Harness (dsh) installed**: [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+- **pnpm** (used to mount into dsh): `npm i -g pnpm`
+- Network access to GitHub, bun.sh, ilinkai.weixin.qq.com (behind the GFW you may need a proxy)
+
+> Step ①'s `npm test` needs neither dsh nor WeChat — run it first to confirm your environment.
+
 ## 🚀 Fastest: 3 steps to a real WeChat
 
 ```sh
@@ -20,12 +31,13 @@ git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git && cd deeps
 #    then open http://127.0.0.1:3470 and scan the QR once
 bash scripts/wechat-up.sh
 
-# 3) mount into dsh; after restarting, say "总管帮我看一下微信" in a new session
+# 3) mount into dsh (needs dsh + pnpm), then RESTART dsh and say "总管帮我看一下微信" in a new session
 ./integration/install-into-dsh.sh --apply
-npm run doctor   # should be all green
+npm run doctor   # should be all green; if patch/resolve are still ✗, dsh hasn't been restarted
 ```
 
 > The QR authorizes a **bot identity** of your WeChat: 1:1, no groups, only messages that arrive after login, and every send is confirmed first — that is Tencent's iLink channel, by design.
+> **After scanning**: have a friend send a message to that account — only then can the dsh butler read it (messaging yourself gets filtered as your own message).
 > The "Quick start" below is the mock (no real WeChat) smoke test; full real-WeChat details: [docs/use-with-ilink-gateway.md](./docs/use-with-ilink-gateway.md).
 
 ---
@@ -38,7 +50,7 @@ npm run doctor   # should be all green
 git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git
 cd deepseek-wechat-operator
 npm install
-npm test          # 22 tests pass = the plugin loads and every tool executes
+npm test          # 27 tests pass = the plugin loads and every tool executes
 npm run demo:json # digest / rank / opportunity extraction over built-in fixtures
 ```
 
@@ -112,31 +124,7 @@ Six tools (registered in [`src/index.js`](./src/index.js)):
 
 ## Real WeChat (bridge mode)
 
-```sh
-cd deepseek-wechat-operator
-WECHAT_OPERATOR_API_KEY=demo-key npm run bridge:dev   # http://127.0.0.1:3468
-```
-
-Push a real-format inbound event:
-
-```sh
-curl -X POST http://127.0.0.1:3468/ingest/ilink \
-  -H 'Authorization: Bearer demo-key' -H 'Content-Type: application/json' \
-  --data @examples/bridge-event.ilink.json
-```
-
-Switch the patch to `mode: bridge` ([`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml)) and ask "what are the 10 most important things today".
-
-To actually send, also configure outbound:
-
-```sh
-WECHAT_OPERATOR_OUTBOUND=ilink-gateway \
-ILINK_GATEWAY_SEND_URL=http://127.0.0.1:3456/messages/send \
-ILINK_GATEWAY_API_KEY=<gateway key> \
-npm run bridge:dev
-```
-
-Full chain: [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md).
+The fastest path is `bash scripts/wechat-up.sh` above (installs Bun, clones the gateway, starts the bridge, and logs you in via QR). For the manual step-by-step and outbound config, see [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md).
 
 ## Permission model
 

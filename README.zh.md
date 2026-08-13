@@ -10,6 +10,17 @@
 
 插件内置了「微信总管」人设：说这句话，它就自动 `digest → 排谁最该回 → 起草 → 发前确认`。发消息是 Yellow 门控，**绝不自动发**。
 
+## 前提条件
+
+- **Node.js ≥ 22**（`node -v` 查看）
+- **macOS 或 Linux**（`wechat-up.sh` 是 bash 脚本；Windows 用 WSL）
+- **git** 和 **curl**
+- **已装 DeepSeek Harness（dsh）**：[deepseek-harness](https://github.com/deepseek-ai/deepseek-harness)
+- **pnpm**（挂进 dsh 用）：`npm i -g pnpm`
+- 网络可达 GitHub、bun.sh、ilinkai.weixin.qq.com（国内不稳时需代理）
+
+> 第 ① 步的 `npm test` 不需要 dsh、不需要微信，先跑通它确认环境没问题。
+
 ## 🚀 最快上手：3 步接管真实微信
 
 ```sh
@@ -19,12 +30,13 @@ git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git && cd deeps
 # ② 一键拉起扫码登录（自动装 Bun、起网关、起桥接），打开 http://127.0.0.1:3470 扫一次码
 bash scripts/wechat-up.sh
 
-# ③ 挂进 dsh，重启后在新会话说「总管帮我看一下微信」
+# ③ 挂进 dsh（需已装 dsh + pnpm），然后【重启 dsh】，在新会话说「总管帮我看一下微信」
 ./integration/install-into-dsh.sh --apply
-npm run doctor   # 应全绿
+npm run doctor   # 应全绿；若 patch/resolve 还打叉，说明 dsh 还没重启
 ```
 
 > 扫码授权的是你微信号的**机器人身份**：1:1、无群聊、只收登录后的新消息、发消息前必确认——这是腾讯 iLink 通道的规则，不是本仓库能改的。
+> **扫完码之后**：让一个朋友给这个号发一条消息，dsh 里的「总管」才能读到它（自己给自己发会被当自己的消息过滤）。
 > 下方「三步开始」是不碰真微信的 mock 自测路径；真微信完整说明见 [docs/use-with-ilink-gateway.md](./docs/use-with-ilink-gateway.md)。
 
 ---
@@ -37,7 +49,7 @@ npm run doctor   # 应全绿
 git clone https://github.com/ArisLiWind/deepseek-wechat-operator.git
 cd deepseek-wechat-operator
 npm install
-npm test          # 22 个测试全过 = 插件能正确加载、能执行
+npm test          # 27 个测试全过 = 插件能正确加载、能执行
 npm run demo:json # 用内置假数据跑一遍 digest / 排序 / 机会提取
 ```
 
@@ -113,31 +125,7 @@ REPO="$PWD"; mkdir -p "$DSH_HOME/profiles/web" && cd "$DSH_HOME/profiles/web" &&
 
 ## 接真实微信（bridge 模式）
 
-```sh
-cd deepseek-wechat-operator
-WECHAT_OPERATOR_API_KEY=demo-key npm run bridge:dev   # 监听 http://127.0.0.1:3468
-```
-
-推一条真实格式入站事件验证：
-
-```sh
-curl -X POST http://127.0.0.1:3468/ingest/ilink \
-  -H 'Authorization: Bearer demo-key' -H 'Content-Type: application/json' \
-  --data @examples/bridge-event.ilink.json
-```
-
-然后 patch 里把 `mode` 改成 `bridge`（补丁见 [`examples/cordis.bridge.patch.yml`](./examples/cordis.bridge.patch.yml)），在 dsh 里直接问「今天最值得我看的 10 件事是什么」。
-
-要真正发消息，再设出站：
-
-```sh
-WECHAT_OPERATOR_OUTBOUND=ilink-gateway \
-ILINK_GATEWAY_SEND_URL=http://127.0.0.1:3456/messages/send \
-ILINK_GATEWAY_API_KEY=<网关的 key> \
-npm run bridge:dev
-```
-
-完整链路见 [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)。
+最快路径就是上面的 `bash scripts/wechat-up.sh`（自动装 Bun、起网关、起桥接、扫码登录）。手动分步方式和出站配置见 [`docs/use-with-ilink-gateway.md`](./docs/use-with-ilink-gateway.md)。
 
 ## 权限模型
 
