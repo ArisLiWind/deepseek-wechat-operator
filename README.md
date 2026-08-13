@@ -2,15 +2,15 @@
 
 English | [中文](./README.zh.md)
 
-`DeepSeek WeChat Operator` is a public, publishable `dsh-plugin` repository built on top of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness).
-
-It is not "AI fully controls my private WeChat." It is a policy-gated Agent layer that turns **accessible, user-authorized WeChat information** into a working surface for:
+`DeepSeek WeChat Operator` gives you a natural-language way to operate your WeChat information flow on top of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness). Feed it **accessible, user-authorized WeChat information** and you can immediately do things like:
 
 - `Ask`: ask questions about your WeChat world
 - `Find`: locate messages, files, links, and opportunities
 - `Digest`: compress a noisy day into the 10 things that matter
 - `Act`: draft or queue actions with approval gates
 - `Automate`: define long-term filters and routines
+
+With DeepSeek Harness underneath, this project turns WeChat-facing inputs into an Agent workflow layer for reading, filtering, searching, summarizing, planning, and preparing actions.
 
 ## Positioning
 
@@ -20,7 +20,7 @@ Chinese:
 
 > 让 DeepSeek 接管你的微信信息工作。
 
-This product does **not** claim unsupported powers such as silently reading all historical private chats, traversing every group, or bulk fetching every article from all followed public accounts. The first version stays inside a safer boundary:
+The first version works on a concrete, practical surface:
 
 - content the user forwards to the agent
 - official bot-channel events that are actually delivered

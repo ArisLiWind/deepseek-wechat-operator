@@ -2,7 +2,15 @@
 
 [English](./README.md)
 
-`DeepSeek WeChat Operator` 是一个基于 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的公开 `dsh-plugin` 项目。它的目标不是“偷偷接管你的私人微信”，而是把**用户明确授权、官方通道可拿到、你主动转发给 Agent 的微信信息**，变成一个可以被 Agent 阅读、筛选、检索、总结、规划和执行的信息操作层。
+`DeepSeek WeChat Operator` 让你在接入 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 之后，直接用自然语言操作自己的微信信息流。你可以把**用户明确授权、官方通道可拿到、你主动转发给 Agent 的微信信息**交给 DeepSeek，然后立刻做到这些事情：
+
+- 问它：“今天我微信里最值得我看的 10 件事是什么？”
+- 找它：“老王上个月发我的那份 PDF 在哪？”
+- 让它判断：“今天最值得我回复的是哪 5 个人？”
+- 让它整理：“最近 7 天别人发给我的岗位、融资、合作机会全部汇总出来。”
+- 让它起草：“帮我回复第三个人，说我感兴趣，但先问清楚预算和时间。”
+
+有了 DeepSeek Harness 之后，这个项目提供的就是一层面向微信世界的 Agent 操作能力：读取、筛选、检索、总结、规划，再把可以做的动作排好优先级，交给你确认或执行。
 
 一句话定位：
 
@@ -12,21 +20,14 @@
 
 > 让 DeepSeek 接管你的微信信息工作。
 
-## 这不是在承诺什么
+## 当前可接入的信息
 
-第一版不会虚假承诺这些能力：
-
-- 静默遍历你过去 5 年的私人聊天记录
-- 稳定读取所有微信群历史消息
-- 批量读取“我关注的全部公众号”的历史文章
-- 像真人一样随意操控微信客户端 UI
-
-这个仓库采取的是更诚实、也更可落地的边界：
+第一版围绕这些入口工作：
 
 - 用户主动转发给 Agent 的消息、文章、文件和链接
 - 通过 iLink / ClawBot 官方 Bot 通道真实送达的事件
 - 用户显式授权抓取的公开链接
-- Agent 可以合法处理的 PDF、Word、Excel、图片、语音等内容
+- Agent 可以处理的 PDF、Word、Excel、图片、语音等内容
 
 ## 产品核心
 
@@ -52,9 +53,9 @@ Hero Feature 不是“AI 控制微信”，而是：
 - [`assets/social-card.svg`](./assets/social-card.svg)：仓库分享素材
 - [`docs/x-post.md`](./docs/x-post.md)：可直接发的 X 帖子草稿
 
-## 已实现的插件能力
+## 已实现的能力
 
-当前插件提供 5 个模型可调用工具：
+当前已经有 5 个核心动作：
 
 - `wechat_digest_world`
 - `wechat_find`
@@ -62,7 +63,7 @@ Hero Feature 不是“AI 控制微信”，而是：
 - `wechat_prepare_reply`
 - `wechat_plan_automation`
 
-其中 `bridge` 模式已经不是占位：
+其中 `bridge` 模式已经可以直接接真实事件：
 
 - 可以接收真实 webhook/轮询转发事件
 - 会缓存每个用户最近的 `context_token`
@@ -149,4 +150,3 @@ npm run check
 
 - [wechatbot.dev 协议说明](https://www.wechatbot.dev/zh/protocol)
 - [Kadxy/weixin-ilink-gateway](https://github.com/Kadxy/weixin-ilink-gateway)
-
