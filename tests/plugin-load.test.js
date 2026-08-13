@@ -14,9 +14,13 @@ const EXPECTED_TOOLS = [
 
 function mountPlugin(config) {
   const tools = []
-  const ctx = { tools: { register: tool => tools.push(tool) } }
+  const sections = []
+  const ctx = {
+    tools: { register: tool => tools.push(tool) },
+    systemPrompt: { section: section => sections.push(section) }
+  }
   apply(ctx, config)
-  return tools
+  return { tools, sections }
 }
 
 test("Config parses defaults and accepts overrides", () => {
@@ -26,8 +30,16 @@ test("Config parses defaults and accepts overrides", () => {
   assert.equal(Config({ minimumScore: 0.5 }).minimumScore, 0.5)
 })
 
+test("apply injects the 微信总管 persona prompt that teaches the trigger", () => {
+  const { sections } = mountPlugin(Config({ mode: "mock" }))
+  assert.equal(sections.length, 1)
+  assert.equal(sections[0].name, "wechat-operator")
+  assert.match(sections[0].text, /总管帮我看一下微信/)
+  assert.match(sections[0].text, /confirm:true/)
+})
+
 test("apply registers all six tools, each with output.render and output.schema", () => {
-  const tools = mountPlugin(Config({ mode: "mock" }))
+  const { tools } = mountPlugin(Config({ mode: "mock" }))
   assert.deepEqual(tools.map(tool => tool.name), EXPECTED_TOOLS)
   for (const tool of tools) {
     assert.equal(typeof tool.output.render, "function", `${tool.name} render is a function`)
@@ -36,7 +48,7 @@ test("apply registers all six tools, each with output.render and output.schema",
 })
 
 test("every mock-mode tool executes and returns schema-valid, renderable output", async () => {
-  const tools = mountPlugin(Config({ mode: "mock" }))
+  const { tools } = mountPlugin(Config({ mode: "mock" }))
   const byName = Object.fromEntries(tools.map(tool => [tool.name, tool]))
   const cases = [
     ["wechat_digest_world", {}],
@@ -58,7 +70,7 @@ test("every mock-mode tool executes and returns schema-valid, renderable output"
 })
 
 test("wechat_send_message is yellow-gated: no dispatch without confirm", async () => {
-  const tools = mountPlugin(Config({ mode: "mock" }))
+  const { tools } = mountPlugin(Config({ mode: "mock" }))
   const send = tools.find(tool => tool.name === "wechat_send_message")
   const value = await send.execute({ targetId: "message-investor-followup", text: "hi" }, {})
   assert.equal(value.sent, false)
@@ -68,7 +80,7 @@ test("wechat_send_message is yellow-gated: no dispatch without confirm", async (
 })
 
 test("wechat_send_message with confirm is record-only in mock mode", async () => {
-  const tools = mountPlugin(Config({ mode: "mock" }))
+  const { tools } = mountPlugin(Config({ mode: "mock" }))
   const send = tools.find(tool => tool.name === "wechat_send_message")
   const value = await send.execute({ targetId: "message-investor-followup", text: "hi", confirm: true }, {})
   assert.equal(value.sent, false)

@@ -6,7 +6,7 @@ import { getDemoFixtures } from "./fixtures.js"
 import { buildApprovalEnvelope } from "./policy.js"
 
 export const name = "deepseek-wechat-operator"
-export const inject = ["tools"]
+export const inject = ["tools", "systemPrompt"]
 
 export const Config = z.object({
   mode: z.union([z.const("mock"), z.const("bridge")]).default("mock"),
@@ -81,6 +81,19 @@ async function resolveItems(config, ctx) {
 }
 
 export function apply(ctx, config) {
+  ctx.systemPrompt.section({
+    name: "wechat-operator",
+    order: 500,
+    text: `You are the user's 微信总管 (WeChat butler). When the user says "总管帮我看一下微信", "总管，看下微信", or anything asking you to review or handle their WeChat, drive this flow with the wechat_* tools:
+
+1. wechat_digest_world — surface today's most important items.
+2. wechat_rank_replies — rank who is most worth replying to.
+3. wechat_prepare_reply — draft a reply for the top candidate.
+4. wechat_send_message — actually send, and ONLY after the user explicitly approves the exact text (pass confirm:true). Never send automatically.
+
+Hard rule: sending is a Yellow action. Always confirm the exact message text with the user first. Read-only tools (digest/find/rank/prepare) may run immediately.`
+  })
+
   ctx.tools.register(defineTool({
     name: "wechat_digest_world",
     description: "Compress accessible WeChat content into the most important items for the user today.",
